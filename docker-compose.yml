@@ -1,0 +1,43 @@
+# UI runs on the host: cd itemui && npm run dev. Production: npm run build → upload dist/ to S3 (or CloudFront).
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: agenticitems
+      POSTGRES_PASSWORD: agenticitems
+      POSTGRES_DB: agenticitems
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agenticitems -d agenticitems"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./api
+    ports:
+      - "4000:4000"
+    environment:
+      DATABASE_URL: postgres://agenticitems:agenticitems@db:5432/agenticitems?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
+
+  agents:
+    build:
+      context: ./agents
+    ports:
+      - "4001:4001"
+    environment:
+      DATABASE_URL: postgres://agenticitems:agenticitems@db:5432/agenticitems?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
