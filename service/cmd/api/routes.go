@@ -12,8 +12,8 @@ func (app *application) routes() http.Handler{
 	
 	// register handler methods and routes
 	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.healthcheckHandler)
-	router.HandlerFunc(http.MethodPost, "/v1/movies", app.createMovieHandler)
-	router.HandlerFunc(http.MethodGet, "/v1/movies/:id", app.showMovieHandler)
+	router.HandlerFunc(http.MethodPost, "/v1/item", app.createItemHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/item/:id", app.showItemHandler)
 
 	return router
 }

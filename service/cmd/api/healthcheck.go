@@ -6,10 +6,12 @@ import (
 
 func (app *application) healthcheckHandler(w http.ResponseWriter, r *http.Request){
 
-	data := map[string]string{
+	data := envelope{
 		"status": "available",
-		"environment": app.config.env,
-		"version": version,
+		"system_info" :map[string]string{
+			"environment": app.config.env,
+			"version": version,
+		},
 	}
 
 	err := app.writeJsonResponse(w, http.StatusOK, data, nil)
