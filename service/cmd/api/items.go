@@ -17,7 +17,7 @@ func (app *application)showItemHandler(w http.ResponseWriter, r *http.Request){
 	id, err := app.readIdParam(r)
 
 	if err != nil {
-		http.NotFound(w, r)
+		app.notFoundResponse(w, r)
 		return
 	}
 
@@ -36,7 +36,6 @@ func (app *application)showItemHandler(w http.ResponseWriter, r *http.Request){
 	err = app.writeJsonResponse(w, http.StatusOK, itemEnvelope, nil)
 
 	if err != nil {
-		app.logger.Error(err.Error())
-		http.Error(w, "Could not Marshal item data into json", http.StatusInternalServerError)
+		app.serverErrorResponse(w, r, err)
 	}
 }
