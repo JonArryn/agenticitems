@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -18,9 +17,10 @@ func (app *application) createItemHandler(w http.ResponseWriter, r *http.Request
 		PurchaseCostCents   uint64    `json:"purchase_cost_cents"`
 	}
 
-	err := json.NewDecoder(r.Body).Decode(&input)
+	err := app.readJson(w, r, &input)
+
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		app.badRequestResponse(w, r, err)
 		return
 	}
 
