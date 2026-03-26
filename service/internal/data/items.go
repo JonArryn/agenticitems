@@ -8,7 +8,7 @@ type Item struct {
 	Name 				string 	  `json:"name"`
 	Code 				string    `json:"code"`
 	Description         string    `json:"description"`
-	SellPriceCents      uint64    `json:"sell_price_cents,string"`
-	PurchaseCostCents   uint64    `json:"purchase_cost_cents,string"`
+	SellPriceCents      uint64    `json:"sell_price_cents"`
+	PurchaseCostCents   uint64    `json:"purchase_cost_cents"`
 	DeletedAt           time.Time `json:"deleted_at,omitzero"`
 }

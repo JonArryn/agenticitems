@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -9,7 +10,21 @@ import (
 )
 
 func (app *application) createItemHandler(w http.ResponseWriter, r *http.Request){
-fmt.Fprintln(w, "create a new movie")
+	var input struct {
+		Name 				string 	  `json:"name"`
+		Code 				string    `json:"code"`
+		Description         string    `json:"description"`
+		SellPriceCents      uint64    `json:"sell_price_cents"`
+		PurchaseCostCents   uint64    `json:"purchase_cost_cents"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&input)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	fmt.Fprintf(w, "%+v\n", input)
 }
 
 func (app *application)showItemHandler(w http.ResponseWriter, r *http.Request){
