@@ -1,8 +1,16 @@
 DB_DSN ?= postgres://agenticitems:agenticitems@localhost:5432/agenticitems?sslmode=disable
 
-## run/api: run the API server
-run/api:
+## run/api: run the API server locally
+run/api/local:
 	go run ./cmd/api -db-dsn=${DB_DSN}
+
+## run entire application stack in docker
+run/app/up:
+	docker compose up -d --build
+
+## tear down the entire application stack in docker
+run/app/down:
+	docker compose down
 
 ## db/migrations/up: apply all up migrations
 db/migrations/up:

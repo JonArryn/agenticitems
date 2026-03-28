@@ -12,11 +12,10 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-
 type envelope map[string]any
 
 // extracts id named parameter from url path
-func (app *application) readIdParam(r *http.Request) (int, error){
+func (app *application) readIdParam(r *http.Request) (int, error) {
 	params := httprouter.ParamsFromContext(r.Context())
 
 	id, err := strconv.Atoi(params.ByName("id"))
@@ -39,7 +38,7 @@ func (app *application) writeJsonResponse(w http.ResponseWriter, status int, dat
 	// new line for terminals
 	js = append(js, '\n')
 
-    // write any optional headers passed in
+	// write any optional headers passed in
 	for key, values := range headers {
 		for _, value := range values {
 			w.Header().Add(key, value)
@@ -63,8 +62,8 @@ func (app *application) readJson(w http.ResponseWriter, r *http.Request, dst any
 
 	if err != nil {
 		var syntaxError *json.SyntaxError
-        var unmarshalTypeError *json.UnmarshalTypeError
-        var invalidUnmarshalError *json.InvalidUnmarshalError
+		var unmarshalTypeError *json.UnmarshalTypeError
+		var invalidUnmarshalError *json.InvalidUnmarshalError
 		var maxBytesError *http.MaxBytesError
 
 		switch {
@@ -89,11 +88,11 @@ func (app *application) readJson(w http.ResponseWriter, r *http.Request, dst any
 		default:
 			return err
 		}
-		
+
 	}
 	err = dec.Decode(&struct{}{})
-		if !errors.Is(err, io.EOF) {
-			return errors.New("body must only contain a single JSON value")
-		}
+	if !errors.Is(err, io.EOF) {
+		return errors.New("body must only contain a single JSON value")
+	}
 	return nil
 }

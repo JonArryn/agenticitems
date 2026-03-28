@@ -1,15 +1,18 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"agenticitemsapi.arryn.net/internal/data"
 	"agenticitemsapi.arryn.net/internal/validator"
 )
 
 func (app *application) createItemHandler(w http.ResponseWriter, r *http.Request) {
+	app.logger.Info("hitting createItemEndpoint")
+
+	// marshal json
 	var input struct {
 		Name              string     `json:"name"`
 		Code              string     `json:"code"`
@@ -33,6 +36,7 @@ func (app *application) createItemHandler(w http.ResponseWriter, r *http.Request
 		PurchaseCostCents: input.PurchaseCostCents,
 	}
 
+	// validate data
 	v := validator.New()
 
 	if data.ValidateItem(v, item); !v.Valid() {
@@ -40,7 +44,22 @@ func (app *application) createItemHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	fmt.Fprintf(w, "%+v\n", input)
+	// write to db
+	err = app.models.Items.Insert(item)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	// add location header
+	headers := make(http.Header)
+	headers.Set("Location", fmt.Sprintf("v1/items/%d", item.ID))
+
+	// response
+	err = app.writeJsonResponse(w, http.StatusCreated, envelope{"item": item}, headers)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }
 
 func (app *application) showItemHandler(w http.ResponseWriter, r *http.Request) {
@@ -52,14 +71,16 @@ func (app *application) showItemHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	item := data.Item{
-		ID:                id,
-		Name:              "Test Item",
-		CreatedAt:         time.Now().UTC(),
-		Code:              "A0001",
-		Description:       "A test item for testing stuff",
-		SellPriceCents:    1224,
-		PurchaseCostCents: 500,
+	item, err := app.models.Items.Get(id)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
 	}
 
 	itemEnvelope := envelope{"item": item}
