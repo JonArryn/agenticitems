@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS items (
     code text UNIQUE NOT NULL,
     name text, 
     description text,
-    purchase_cost_cents bigint,
-    sell_price_cents bigint,
+    purchase_cost NUMERIC(16, 4),
+    sell_price NUMERIC(16, 4),
     deleted_at timestamptz
 );

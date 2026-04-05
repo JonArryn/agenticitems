@@ -13,13 +13,7 @@ func (app *application) createItemHandler(w http.ResponseWriter, r *http.Request
 	app.logger.Info("hitting createItemEndpoint")
 
 	// marshal json
-	var input struct {
-		Name              string     `json:"name"`
-		Code              string     `json:"code"`
-		Description       string     `json:"description"`
-		SellPriceCents    data.Cents `json:"sell_price"`
-		PurchaseCostCents data.Cents `json:"purchase_cost"`
-	}
+	var input data.RawItem
 
 	err := app.readJson(w, r, &input)
 
@@ -28,18 +22,12 @@ func (app *application) createItemHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	item := &data.Item{
-		Name:              input.Name,
-		Code:              input.Code,
-		Description:       input.Description,
-		SellPriceCents:    input.SellPriceCents,
-		PurchaseCostCents: input.PurchaseCostCents,
-	}
-
-	// validate data
+	// validate input data
 	v := validator.New()
 
-	if data.ValidateItem(v, item); !v.Valid() {
+	item := data.ValidateInputItem(v, &input)
+
+	if !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}

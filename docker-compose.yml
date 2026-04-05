@@ -19,7 +19,7 @@ services:
 
   api:
     build:
-      context: ./api
+      context: ./service
     ports:
       - "4000:4000"
     environment:

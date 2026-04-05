@@ -6,29 +6,73 @@ import (
 	"time"
 
 	"agenticitemsapi.arryn.net/internal/validator"
+	"github.com/shopspring/decimal"
 )
 
 type Item struct {
-	ID                int       `json:"id"`
-	CreatedAt         time.Time `json:"created_at"`
-	Name              string    `json:"name"`
-	Code              string    `json:"code"`
-	Description       string    `json:"description"`
-	SellPriceCents    Cents     `json:"sell_price"`
-	PurchaseCostCents Cents     `json:"purchase_cost"`
-	DeletedAt         *time.Time `json:"deleted_at,omitempty"`
+	ID           int             `json:"id"`
+	CreatedAt    time.Time       `json:"created_at"`
+	Name         string          `json:"name"`
+	Code         string          `json:"code"`
+	Description  string          `json:"description"`
+	SellPrice    decimal.Decimal `json:"sell_price"`
+	PurchaseCost decimal.Decimal `json:"purchase_cost"`
+	DeletedAt    *time.Time      `json:"deleted_at,omitempty"`
 }
 
-func ValidateItem(v *validator.Validator, input *Item) {
-	v.Check(input.Code != "", "code", "must be provided")
+type RawItem struct {
+	Name         string `json:"name"`
+	Code         string `json:"code"`
+	Description  string `json:"description"`
+	SellPrice    string `json:"sell_price"`
+	PurchaseCost string `json:"purchase_cost"`
+}
+
+func ValidateInputItem(v *validator.Validator, input *RawItem) *Item {
+
+	v.Check(validator.NotBlank(input.Code), "code", "must be provided")
 	v.Check(len(input.Code) <= 25, "code", "must not be more than 25 bytes long")
 
-	v.Check(input.Name != "", "name", "must be provided")
+	v.Check(validator.NotBlank(input.Name), "name", "must be provided")
 	v.Check(len(input.Name) <= 99, "name", "must not be more than 99 bytes long")
 
-	v.Check(input.SellPriceCents > 0, "sell_price", "must be a positive value")
-	v.Check(input.PurchaseCostCents > 0, "purchase_cost", "must be a positive value")
+	v.Check(validator.MaxDecimalPlaces(input.SellPrice, 4), "sell_price", "Sell price must have 4 decimal places or less")
+	v.Check(validator.MaxDecimalPlaces(input.PurchaseCost, 4), "purchase_cost", "Purchase cost must have 4 decimal places or less")
 
+	v.Check(validator.NotBlank(input.SellPrice), "sell_price", "Sell price cannot be blank")
+	v.Check(validator.NotBlank(input.PurchaseCost), "purchase_cost", "Purchase cost cannot be blank")
+
+	sellPriceDecimal, err := decimal.NewFromString(input.SellPrice)
+
+	if err != nil {
+		v.AddError("sell_price", "Must be a valid number")
+		return nil //no point in continuing if a number can't be parsed
+	}
+
+	purchaseCostDecimal, err := decimal.NewFromString(input.PurchaseCost)
+
+	if err != nil {
+		v.AddError("purchase_cost", "Must be a valid number")
+		return nil
+
+	}
+
+	v.Check(sellPriceDecimal.IsPositive(), "sell_price", "must be a positive value")
+	v.Check(purchaseCostDecimal.IsPositive(), "purchase_cost", "must be a positive value")
+
+	if !v.Valid() {
+		return nil
+	}
+
+	item := &Item{
+		Name:         input.Name,
+		Code:         input.Code,
+		Description:  input.Description,
+		SellPrice:    sellPriceDecimal,
+		PurchaseCost: purchaseCostDecimal,
+	}
+
+	return item
 }
 
 type ItemModel struct {
@@ -37,12 +81,12 @@ type ItemModel struct {
 
 func (i ItemModel) Insert(item *Item) error {
 	query := `
-	INSERT INTO items (code, name, description, sell_price_cents, purchase_cost_cents)
+	INSERT INTO items (code, name, description, sell_price, purchase_cost)
 	VALUES ($1, $2, $3, $4, $5)
 	RETURNING id, code, created_at
 	`
 
-	args := []any{item.Code, item.Name, item.Description, item.SellPriceCents, item.PurchaseCostCents}
+	args := []any{item.Code, item.Name, item.Description, item.SellPrice, item.PurchaseCost}
 
 	return i.DB.QueryRow(query, args...).Scan(&item.ID, &item.Code, &item.CreatedAt)
 }
@@ -55,7 +99,7 @@ func (i ItemModel) Get(id int) (*Item, error) {
 
 	// write query
 	query := `
-	SELECT id, code, name, description, sell_price_cents, purchase_cost_cents, created_at, deleted_at
+	SELECT id, code, name, description, sell_price, purchase_cost, created_at, deleted_at
 	FROM items 
 	WHERE id=$1
 	`
@@ -68,8 +112,8 @@ func (i ItemModel) Get(id int) (*Item, error) {
 		&item.Code,
 		&item.Name,
 		&item.Description,
-		&item.SellPriceCents,
-		&item.PurchaseCostCents,
+		&item.SellPrice,
+		&item.PurchaseCost,
 		&item.CreatedAt,
 		&item.DeletedAt,
 	)
