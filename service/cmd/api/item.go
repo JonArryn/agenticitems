@@ -10,10 +10,8 @@ import (
 )
 
 func (app *application) createItemHandler(w http.ResponseWriter, r *http.Request) {
-	app.logger.Info("hitting createItemEndpoint")
-
 	// marshal json
-	var input data.RawItem
+	var input data.ItemInput
 
 	err := app.readJson(w, r, &input)
 
@@ -33,9 +31,16 @@ func (app *application) createItemHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	// write to db
-	err = app.models.Items.Insert(item)
+	err = app.models.Item.Insert(item)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		switch {
+		case errors.Is(err, data.ErrDuplicateCode):
+			app.failedValidationResponse(w, r, map[string]string{
+				"code": "an item with this code already exists",
+			})
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
 		return
 	}
 
@@ -59,7 +64,7 @@ func (app *application) showItemHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	item, err := app.models.Items.Get(id)
+	item, err := app.models.Item.Get(id)
 
 	if err != nil {
 		switch {
@@ -78,4 +83,68 @@ func (app *application) showItemHandler(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
+}
+
+func (app *application) updateItemHandler(w http.ResponseWriter, r *http.Request) {
+	// extract url params from request context
+	id, err := app.readIdParam(r)
+
+	if err != nil {
+		app.notFoundResponse(w, r)
+		return
+	}
+
+	item, err := app.models.Item.Get(id)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	// marshal json
+	var input data.ItemInput
+
+	err = app.readJson(w, r, &input)
+
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	// validate input data
+	v := validator.New()
+
+	validItem := data.ValidateInputItem(v, &input)
+
+	if !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	item.Code = validItem.Code
+	item.Name = validItem.Name
+	item.Description = validItem.Description
+	item.SellPrice = validItem.SellPrice
+	item.PurchaseCost = validItem.PurchaseCost
+
+	err = app.models.Item.Update(item)
+
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	itemEnvelope := envelope{"item": item}
+
+	err = app.writeJsonResponse(w, http.StatusOK, itemEnvelope, nil)
+
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+
 }

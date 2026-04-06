@@ -1,0 +1,25 @@
+info:
+  name: create item
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{url}}:{{port}}/{{version}}/item"
+  body:
+    type: json
+    data: |-
+      {
+        "code": "A0001",
+        "name": "Widget 1",
+        "description": "This is a widget.",
+        "sell_price": "123.45",
+        "purchase_cost": "65.01"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

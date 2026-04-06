@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS items (
+CREATE TABLE IF NOT EXISTS item (
     id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     created_at timestamptz NOT NULL DEFAULT NOW(),
     code text UNIQUE NOT NULL,

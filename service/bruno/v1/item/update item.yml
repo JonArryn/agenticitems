@@ -1,0 +1,25 @@
+info:
+  name: update item
+  type: http
+  seq: 3
+
+http:
+  method: PUT
+  url: "{{url}}:{{port}}/{{version}}/item/1"
+  body:
+    type: json
+    data: |-
+      {
+        "code": "A0001",
+        "name": "Widget One Update",
+        "description": "This is a widget.",
+        "sell_price": "123.45",
+        "purchase_cost": "65.01"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

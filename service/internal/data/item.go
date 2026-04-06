@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"agenticitemsapi.arryn.net/internal/validator"
+	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
 )
 
@@ -20,7 +21,7 @@ type Item struct {
 	DeletedAt    *time.Time      `json:"deleted_at,omitempty"`
 }
 
-type RawItem struct {
+type ItemInput struct {
 	Name         string `json:"name"`
 	Code         string `json:"code"`
 	Description  string `json:"description"`
@@ -28,7 +29,7 @@ type RawItem struct {
 	PurchaseCost string `json:"purchase_cost"`
 }
 
-func ValidateInputItem(v *validator.Validator, input *RawItem) *Item {
+func ValidateInputItem(v *validator.Validator, input *ItemInput) *Item {
 
 	v.Check(validator.NotBlank(input.Code), "code", "must be provided")
 	v.Check(len(input.Code) <= 25, "code", "must not be more than 25 bytes long")
@@ -81,14 +82,23 @@ type ItemModel struct {
 
 func (i ItemModel) Insert(item *Item) error {
 	query := `
-	INSERT INTO items (code, name, description, sell_price, purchase_cost)
+	INSERT INTO item (code, name, description, sell_price, purchase_cost)
 	VALUES ($1, $2, $3, $4, $5)
 	RETURNING id, code, created_at
 	`
 
 	args := []any{item.Code, item.Name, item.Description, item.SellPrice, item.PurchaseCost}
 
-	return i.DB.QueryRow(query, args...).Scan(&item.ID, &item.Code, &item.CreatedAt)
+	err := i.DB.QueryRow(query, args...).Scan(&item.ID, &item.Code, &item.CreatedAt)
+
+	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			return ErrDuplicateCode
+		}
+		return err
+	}
+	return nil
 }
 
 func (i ItemModel) Get(id int) (*Item, error) {
@@ -100,7 +110,7 @@ func (i ItemModel) Get(id int) (*Item, error) {
 	// write query
 	query := `
 	SELECT id, code, name, description, sell_price, purchase_cost, created_at, deleted_at
-	FROM items 
+	FROM item 
 	WHERE id=$1
 	`
 	// create an empty item struct
@@ -133,9 +143,46 @@ func (i ItemModel) Get(id int) (*Item, error) {
 }
 
 func (i ItemModel) Update(item *Item) error {
-	return nil
+	query := `
+	UPDATE item 
+	SET code = $1, name = $2, description = $3, sell_price = $4, purchase_cost = $5
+	WHERE id = $6
+	RETURNING id
+	`
+	args := []any{
+		item.Code,
+		item.Name,
+		item.Description,
+		item.SellPrice,
+		item.PurchaseCost,
+		item.ID,
+	}
+
+	return i.DB.QueryRow(query, args...).Scan(&item.ID)
 }
 
 func (i ItemModel) Delete(id int) error {
+	return nil
+}
+
+func (i ItemModel) CheckExists(id int) error {
+	if id < 1 {
+		return ErrRecordNotFound
+	}
+
+	query := `
+	SELECT EXISTS(SELECT 1 FROM item WHERE id = $1)
+	`
+
+	var exists bool
+	err := i.DB.QueryRow(query, id).Scan(&exists)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return ErrRecordNotFound
+	}
+
 	return nil
 }

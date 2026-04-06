@@ -1,0 +1,8 @@
+name: local
+variables:
+  - name: url
+    value: http://localhost
+  - name: port
+    value: "4000"
+  - name: version
+    value: /v1
